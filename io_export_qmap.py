@@ -44,8 +44,6 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
     option_tm: BoolProperty(name="Apply transform", default=True)
     option_grid: FloatProperty(name="Grid", default=4.0,
         description="Snap to grid (0 for off-grid)", min=0.0, max=256.0)
-    option_depth: FloatProperty(name="Depth", default=8.0,
-        description="Pyramid poke offset", min=0.0, max=256.0)
     option_format: EnumProperty(name="Format", default='Valve',
         items=( ('Quake', "Standard", "Axis-aligned texture projection"),
                 ('Valve', "Valve220", "Face-bound texture projection") ) )
