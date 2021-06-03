@@ -30,6 +30,7 @@ from mathutils import Vector, Matrix
 from numpy.linalg import solve
 from bpy_extras.io_utils import ExportHelper
 from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty
+from bpy.types import PropertyGroup
 
 class ExportQuakeMap(bpy.types.Operator, ExportHelper):
     bl_idname = 'export.map'
@@ -345,6 +346,78 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             bpy.context.window_manager.clipboard = ''.join(geo)
 
         return {'FINISHED'}
+    
+
+class MakeRoomOperator(bpy.types.Operator):
+    '''(Gtk/Net)Radiant-like "Make Room"'''
+    bl_idname = "mesh.make_room"
+    bl_label = "Make Room"
+    bl_options = {"REGISTER", "UNDO"}
+    
+    thickness: bpy.props.FloatProperty(name="Wall Thickness", default=0.2)
+
+    @classmethod
+    def poll(cls, context):
+        return context.active_object is not None \
+        and context.active_object.type == "MESH" \
+        and bpy.context.mode == "OBJECT"
+
+    def execute(self, context):
+        if bpy.ops.object.mode_set.poll():
+            bpy.ops.object.mode_set(mode='EDIT')
+        bpy.ops.mesh.edge_split(type="EDGE")
+        bpy.ops.mesh.separate(type="LOOSE")
+        bpy.ops.object.mode_set(mode='OBJECT')
+        for obj in context.selected_objects:
+            bpy.context.view_layer.objects.active = obj
+            solidify_mod = context.active_object.modifiers.new(name="BlendRadiantSolidify", type="SOLIDIFY")
+            solidify_mod.thickness = self.thickness
+            solidify_mod.offset = 1.0
+            bpy.ops.object.modifier_apply(modifier="BlendRadiantSolidify")
+        return {'FINISHED'}
+
+
+class BlendRadiantObjectProperties(PropertyGroup):
+    mesh_as: EnumProperty(
+        name="Mesh as",
+        description="What to represent this mesh as in .map output",
+        items=[
+                ('NONE', "Nothing", ""),
+                ('CONVEX_BRUSH', "Convex Brush", ""),
+                ('ROOM_BRUSHES', "Room Brushes", ""),
+            ]
+        )
+    light_as: EnumProperty(
+        name="Light as",
+        description="What to represent this light as in .map output",
+        items=[
+                ('NONE', "Nothing", ""),
+                ('LIGHT', "Light", ""),
+            ]
+        )
+
+
+class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
+    bl_idname = "OBJECT_PT_blendradiant"
+    bl_label = "BlendRadiant Properties"
+    bl_space_type = 'PROPERTIES'
+    bl_region_type = 'WINDOW'
+    bl_context = "object"
+    bl_options = {'DEFAULT_CLOSED'}
+
+    @classmethod
+    def poll(cls, context):
+        return (context.object is not None)
+
+    def draw(self, context):
+        layout = self.layout
+        obj = context.active_object
+        
+        if obj.type == "MESH":
+            layout.prop(obj.blendradiant_props, "mesh_as")
+        elif obj.type == "LIGHT":
+            layout.prop(obj.blendradiant_props, "light_as")        
+
 
 def menu_func_export(self, context):
     self.layout.operator(ExportQuakeMap.bl_idname, text="Quake Map (.map)")
@@ -352,7 +425,18 @@ def menu_func_export(self, context):
 def register():
     bpy.utils.register_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    bpy.utils.register_class(BlendRadiantObjectProperties)
+    bpy.types.Object.blendradiant_props = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
+    bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
+    bpy.utils.register_class(MakeRoomOperator)
 
 def unregister():
     bpy.utils.unregister_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    bpy.utils.unregister_class(BlendRadiantObjectProperties)
+    del bpy.types.Object.blendradiant_props
+    bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
+    bpy.utils.unregister_class(MakeRoomOperator)
+
+if __name__ == "__main__":
+    register()
