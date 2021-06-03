@@ -42,9 +42,6 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
 
     option_sel: BoolProperty(name="Selection only", default=True)
     option_tm: BoolProperty(name="Apply transform", default=True)
-    option_geo: EnumProperty(name="Geo", default='Faces',
-        items=( ('Brushes', "Brushes", "Export each object as a convex brush"),
-                ('Faces', "Faces", "Export each face as a pyramid brush") ) )
     option_grid: FloatProperty(name="Grid", default=4.0,
         description="Snap to grid (0 for off-grid)", min=0.0, max=256.0)
     option_depth: FloatProperty(name="Depth", default=8.0,
@@ -261,57 +258,39 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
         fw('{\n"classname" "worldspawn"\n')
         if self.option_format == 'Valve':
             fw('"mapversion" "220"\n')
-        bm = bmesh.new()
-
-        if self.option_geo == 'Faces' and objects != []:
-            orig_sel = context.selected_objects
-            orig_act = context.active_object
-            if orig_act is not None:
-                orig_mode = orig_act.mode
-                bpy.ops.object.mode_set(mode='OBJECT')
-            bpy.ops.object.select_all(action='DESELECT')
-            for obj in objects:
-                obj.select_set(True)
-            context.view_layer.objects.active = objects[0]
-            bpy.ops.object.duplicate()
-            bpy.ops.object.join()
-            mobj = context.active_object
-            mobj.data.materials.append(None) # empty slot for new faces
-            bm.from_mesh(mobj.data)
-
-            if self.option_tm:
-                bmesh.ops.transform(bm, matrix=obj.matrix_world,
-                                                verts=bm.verts)
-            for vert in bm.verts:
-                vert.co = self.gridsnap(vert.co)
-            bmesh.ops.connect_verts_concave(bm, faces=bm.faces)
-            bmesh.ops.connect_verts_nonplanar(bm, faces=bm.faces,
-                                                angle_limit=0.0)
-            for face in bm.faces[:]:
-                fw('{\n')
-                for vert in reversed(face.verts[0:3]):
-                    fw(f'( {self.printvec(vert.co)} ) ')
-                fw(self.texdata(face, bm, mobj))
-                pyr = bmesh.ops.poke(bm, faces=[face],
-                            offset=-self.option_depth)
-                apex = pyr['verts'][0].co
-                pyr['verts'][0].co = self.gridsnap(apex)
-                for pyrface in pyr['faces']:
-                    for vert in pyrface.verts[0:3]: # backfacing
-                        fw(f'( {self.printvec(vert.co)} ) ')
-                    pyrface.material_index = len(mobj.data.materials) - 1
-                    fw(self.texdata(pyrface, bm, mobj))
-                fw('}\n')
-
-            bpy.data.objects.remove(mobj)
-            for obj in orig_sel:
-                obj.select_set(True)
-            context.view_layer.objects.active = orig_act
-            if orig_act is not None:
-                bpy.ops.object.mode_set(mode=orig_mode)
-
-        elif self.option_geo == 'Brushes':
-            for obj in objects:
+    
+        # store active + selected objects in editor because
+        # we will have to change them to apply high-level op
+        prev_active = bpy.context.view_layer.objects.active
+        prev_selected = list(bpy.context.view_layer.objects.selected)
+            
+        for top_level_obj in objects:
+            # subdivide mesh into "room brushes" if requested
+            if top_level_obj.blendradiant_props.mesh_as == "CONVEX_aBRUSH":
+                sub_objs = [top_level_obj]
+            elif top_level_obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
+                # deep copying objects code from:
+                # https://blender.stackexchange.com/a/135608/114640
+                tmp_obj = top_level_obj.copy()
+                tmp_obj.data = top_level_obj.data.copy()
+                # link to scene so we'll be able to use it
+                bpy.context.collection.objects.link(tmp_obj)
+                # select copy (context override didn't work...)
+                bpy.ops.object.select_all(action='DESELECT')
+                bpy.context.view_layer.objects.active = tmp_obj
+                tmp_obj.select_set(True)
+                # apply make_room operator to copy
+                thickness = top_level_obj.blendradiant_props.room_brush_thickness
+                bpy.ops.mesh.make_room(thickness=thickness)
+                # these are the room brush objects
+                sub_objs = list(bpy.context.view_layer.objects.selected)
+                print("sub_objs:")
+                print(len(sub_objs))
+            else:
+                sub_objs = []
+            
+            for obj in sub_objs:
+                bm = bmesh.new()
                 bm.from_mesh(obj.data)
                 if self.option_tm:
                     bmesh.ops.transform(bm, matrix=obj.matrix_world,
@@ -335,8 +314,27 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                     fw(self.texdata(face, bm, obj))
                 fw('}\n')
                 bm.clear()
+                
+                bm.free()
+                
+                # free sub-obj
+                print("removing:")
+                print(obj)
+                
+                # only delete this if it's composed of tmp objects for room brushes!
+                if top_level_obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
+                    bpy.data.objects.remove(obj)
+        
+        # we don't have to remove tmp_obj as it went into
+        # the first sub_obj during make_room!
+        
+        # restore previous active + selected
+        bpy.ops.object.select_all(action='DESELECT')
+        bpy.context.view_layer.objects.active = prev_active
+        for _prev_selected in prev_selected:
+                _prev_selected.select_set(True)
 
-        bm.free()
+
         fw('}')
 
         if self.option_dest == 'File':
@@ -368,6 +366,8 @@ class MakeRoomOperator(bpy.types.Operator):
         bpy.ops.mesh.edge_split(type="EDGE")
         bpy.ops.mesh.separate(type="LOOSE")
         bpy.ops.object.mode_set(mode='OBJECT')
+        print("selected_objects:")
+        print(context.selected_objects)
         for obj in context.selected_objects:
             bpy.context.view_layer.objects.active = obj
             solidify_mod = context.active_object.modifiers.new(name="BlendRadiantSolidify", type="SOLIDIFY")
@@ -384,7 +384,8 @@ class BlendRadiantObjectProperties(PropertyGroup):
         items=[
                 ('NONE', "Nothing", ""),
                 ('CONVEX_BRUSH', "Convex Brush", ""),
-                ('ROOM_BRUSHES', "Room Brushes", ""),
+                ('ROOM_BRUSHES', "Room Brush(es)", ""),
+                ('MODEL', "Model", ""),
             ]
         )
     light_as: EnumProperty(
@@ -395,11 +396,16 @@ class BlendRadiantObjectProperties(PropertyGroup):
                 ('LIGHT', "Light", ""),
             ]
         )
+    room_brush_thickness: FloatProperty(
+        name="Thickness",
+        description="Thickness of Room Brush walls",
+        default=0.1,
+    )
 
 
 class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
     bl_idname = "OBJECT_PT_blendradiant"
-    bl_label = "BlendRadiant Properties"
+    bl_label = "BlendRadiant"
     bl_space_type = 'PROPERTIES'
     bl_region_type = 'WINDOW'
     bl_context = "object"
@@ -415,6 +421,8 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
         
         if obj.type == "MESH":
             layout.prop(obj.blendradiant_props, "mesh_as")
+            if obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
+                layout.prop(obj.blendradiant_props, "room_brush_thickness")
         elif obj.type == "LIGHT":
             layout.prop(obj.blendradiant_props, "light_as")        
 
