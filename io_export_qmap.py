@@ -29,7 +29,7 @@ import bpy, bmesh, math
 from mathutils import Vector, Matrix
 from numpy.linalg import solve
 from bpy_extras.io_utils import ExportHelper
-from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty
+from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty, PointerProperty
 from bpy.types import PropertyGroup
 
 class ExportQuakeMap(bpy.types.Operator, ExportHelper):
@@ -415,6 +415,40 @@ class BlendRadiantObjectProperties(PropertyGroup):
         default=0.1,
         update=on_update_room_brush_thickness,
     )
+    entity_classname: StringProperty(
+        name="Entity Classname",
+    )
+
+
+# this is JUST to have a text field (= StringProperty prop) that can
+# be filled in using a long searchable list! ridiculous, blender
+
+entity_classnames = [] # ensure Python keeps refs, cf warning in EnumProperty docs
+def get_entity_classnames(self, context):
+    global entity_classnames
+    entity_classnames = [
+        ("worldspawn", "worldspawn", ""),
+        ("info_player_deathmatch", "info_player_deathmatch", ""),
+    ]
+    return entity_classnames
+
+class SearchEntityClassnamesOperator(bpy.types.Operator):
+    bl_idname = "object.search_entity_classnames"
+    bl_label = "Search Entity Classnames"
+    bl_property = "entity_classname"
+    
+    entity_classname: EnumProperty(
+        name="Entity Classname",
+        items=get_entity_classnames,
+    )
+
+    def execute(self, context):
+        bpy.context.active_object.blendradiant.entity_classname = self.entity_classname
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {'RUNNING_MODAL'}
 
 
 class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
@@ -440,6 +474,10 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
         elif obj.type == "LIGHT":
             layout.prop(obj.blendradiant, "light_as")
 
+        row = layout.row()
+        row.prop(obj.blendradiant, "entity_classname")
+        row.operator("object.search_entity_classnames", text="", icon="VIEWZOOM")
+
 
 def menu_func_export(self, context):
     self.layout.operator(ExportQuakeMap.bl_idname, text="Quake Map (.map)")
@@ -449,6 +487,7 @@ def register():
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.utils.register_class(BlendRadiantObjectProperties)
     bpy.types.Object.blendradiant = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
+    bpy.utils.register_class(SearchEntityClassnamesOperator)
     bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.register_class(MakeRoomOperator)
 
@@ -457,6 +496,7 @@ def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.utils.unregister_class(BlendRadiantObjectProperties)
     del bpy.types.Object.blendradiant
+    bpy.utils.unregister_class(SearchEntityClassnamesOperator)
     bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.unregister_class(MakeRoomOperator)
 
