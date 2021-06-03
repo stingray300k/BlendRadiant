@@ -284,8 +284,6 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                 bpy.ops.mesh.make_room(thickness=thickness)
                 # these are the room brush objects
                 sub_objs = list(bpy.context.view_layer.objects.selected)
-                print("sub_objs:")
-                print(len(sub_objs))
             else:
                 sub_objs = []
             
@@ -316,10 +314,6 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                 bm.clear()
                 
                 bm.free()
-                
-                # free sub-obj
-                print("removing:")
-                print(obj)
                 
                 # only delete this if it's composed of tmp objects for room brushes!
                 if top_level_obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
@@ -366,8 +360,6 @@ class MakeRoomOperator(bpy.types.Operator):
         bpy.ops.mesh.edge_split(type="EDGE")
         bpy.ops.mesh.separate(type="LOOSE")
         bpy.ops.object.mode_set(mode='OBJECT')
-        print("selected_objects:")
-        print(context.selected_objects)
         for obj in context.selected_objects:
             bpy.context.view_layer.objects.active = obj
             solidify_mod = context.active_object.modifiers.new(name="BlendRadiantSolidify", type="SOLIDIFY")
