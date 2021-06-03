@@ -266,9 +266,9 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             
         for top_level_obj in objects:
             # subdivide mesh into "room brushes" if requested
-            if top_level_obj.blendradiant_props.mesh_as == "CONVEX_aBRUSH":
+            if top_level_obj.blendradiant.mesh_as == "CONVEX_aBRUSH":
                 sub_objs = [top_level_obj]
-            elif top_level_obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
+            elif top_level_obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                 # deep copying objects code from:
                 # https://blender.stackexchange.com/a/135608/114640
                 tmp_obj = top_level_obj.copy()
@@ -280,7 +280,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                 bpy.context.view_layer.objects.active = tmp_obj
                 tmp_obj.select_set(True)
                 # apply make_room operator to copy
-                thickness = top_level_obj.blendradiant_props.room_brush_thickness
+                thickness = top_level_obj.blendradiant.room_brush_thickness
                 bpy.ops.mesh.make_room(thickness=thickness)
                 # these are the room brush objects
                 sub_objs = list(bpy.context.view_layer.objects.selected)
@@ -316,7 +316,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                 bm.free()
                 
                 # only delete this if it's composed of tmp objects for room brushes!
-                if top_level_obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
+                if top_level_obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                     bpy.data.objects.remove(obj)
         
         # we don't have to remove tmp_obj as it went into
@@ -412,11 +412,11 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
         obj = context.active_object
         
         if obj.type == "MESH":
-            layout.prop(obj.blendradiant_props, "mesh_as")
-            if obj.blendradiant_props.mesh_as == "ROOM_BRUSHES":
-                layout.prop(obj.blendradiant_props, "room_brush_thickness")
+            layout.prop(obj.blendradiant, "mesh_as")
+            if obj.blendradiant.mesh_as == "ROOM_BRUSHES":
+                layout.prop(obj.blendradiant, "room_brush_thickness")
         elif obj.type == "LIGHT":
-            layout.prop(obj.blendradiant_props, "light_as")        
+            layout.prop(obj.blendradiant, "light_as")        
 
 
 def menu_func_export(self, context):
@@ -426,7 +426,7 @@ def register():
     bpy.utils.register_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
     bpy.utils.register_class(BlendRadiantObjectProperties)
-    bpy.types.Object.blendradiant_props = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
+    bpy.types.Object.blendradiant = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
     bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.register_class(MakeRoomOperator)
 
@@ -434,7 +434,7 @@ def unregister():
     bpy.utils.unregister_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
     bpy.utils.unregister_class(BlendRadiantObjectProperties)
-    del bpy.types.Object.blendradiant_props
+    del bpy.types.Object.blendradiant
     bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.unregister_class(MakeRoomOperator)
 
