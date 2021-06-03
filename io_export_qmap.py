@@ -96,12 +96,12 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             # Set up "2d world" coordinate system with the 01 edge along X
             world01 = V[1] - V[0]
             world02 = V[2] - V[0]
-            
+
             if world01.length < 0.00001 or world02.length < 0.00001:
               world01_02Angle = 0
             else:
               world01_02Angle = world01.angle(world02)
-              
+
             if face.normal.dot(world01.cross(world02)) < 0:
                 world01_02Angle = -world01_02Angle
             world01_2d = Vector((world01.length, 0.0))
@@ -209,7 +209,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             tex02.x *= width
             tex01.y *= height
             tex02.y *= height
-            
+
             # Find affine transformation between 2D and UV
             texCoordsVec = Vector((tex01.x, tex01.y, tex02.x, tex02.y))
             world2DMatrix = Matrix(((world01_2d.x, world01_2d.y, 0, 0),
@@ -245,7 +245,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             texstring += f" {self.printvec(finvals)}\n"
 
         return texstring
-  
+
     def execute(self, context):
         if self.option_sel:
             objects = context.selected_objects
@@ -258,15 +258,15 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
         fw('{\n"classname" "worldspawn"\n')
         if self.option_format == 'Valve':
             fw('"mapversion" "220"\n')
-    
+
         # store active + selected objects in editor because
         # we will have to change them to apply high-level op
         prev_active = bpy.context.view_layer.objects.active
         prev_selected = list(bpy.context.view_layer.objects.selected)
-            
+
         for top_level_obj in objects:
             # subdivide mesh into "room brushes" if requested
-            if top_level_obj.blendradiant.mesh_as == "CONVEX_aBRUSH":
+            if top_level_obj.blendradiant.mesh_as == "CONVEX_BRUSH":
                 sub_objs = [top_level_obj]
             elif top_level_obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                 # deep copying objects code from:
@@ -286,7 +286,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                 sub_objs = list(bpy.context.view_layer.objects.selected)
             else:
                 sub_objs = []
-            
+
             for obj in sub_objs:
                 bm = bmesh.new()
                 bm.from_mesh(obj.data)
@@ -312,16 +312,16 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
                     fw(self.texdata(face, bm, obj))
                 fw('}\n')
                 bm.clear()
-                
+
                 bm.free()
-                
+
                 # only delete this if it's composed of tmp objects for room brushes!
                 if top_level_obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                     bpy.data.objects.remove(obj)
-        
+
         # we don't have to remove tmp_obj as it went into
         # the first sub_obj during make_room!
-        
+
         # restore previous active + selected
         bpy.ops.object.select_all(action='DESELECT')
         bpy.context.view_layer.objects.active = prev_active
@@ -338,14 +338,14 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             bpy.context.window_manager.clipboard = ''.join(geo)
 
         return {'FINISHED'}
-    
+
 
 class MakeRoomOperator(bpy.types.Operator):
     '''(Gtk/Net)Radiant-like "Make Room"'''
     bl_idname = "mesh.make_room"
     bl_label = "Make Room"
     bl_options = {"REGISTER", "UNDO"}
-    
+
     thickness: bpy.props.FloatProperty(name="Wall Thickness", default=0.2)
 
     @classmethod
@@ -410,13 +410,13 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
     def draw(self, context):
         layout = self.layout
         obj = context.active_object
-        
+
         if obj.type == "MESH":
             layout.prop(obj.blendradiant, "mesh_as")
             if obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                 layout.prop(obj.blendradiant, "room_brush_thickness")
         elif obj.type == "LIGHT":
-            layout.prop(obj.blendradiant, "light_as")        
+            layout.prop(obj.blendradiant, "light_as")
 
 
 def menu_func_export(self, context):
