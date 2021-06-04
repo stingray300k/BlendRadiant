@@ -1,3 +1,12 @@
+This is a fork of io_export_qmap with the aim of modifying it until it can
+export maps that are directly readable by (Gtk/Net)Radiant. Another aim is to
+add tools that facilitate the creation of entire maps (including lights,
+models, entities, ... and not just brushes) in Blender, basically allowing
+users to do everything they could otherwise do in (Gtk/Net)Radiant - hence the
+name *BlendRadiant*.
+
+-----
+
 Exports either individual faces as pyramids, or objects as convex brushes. Uses material names for texture assignment and material image size for scaling. Supports UVs both in standard Quake and in Valve220 format (adapted from EricW's implementation for [OBJ2MAP](https://bitbucket.org/khreathor/obj-2-map)). Offers custom grid. Allows saving to clipboard.
 
 The exporter ensures that the brushes are convex and the faces planar. You don't have to triangulate the meshes in advance, but in some cases it can help with UVs (e.g. with mid-edge vertices). There's room for improvement, but it should work fine as is.
