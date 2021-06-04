@@ -15,27 +15,17 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-bl_info = {
-    "name": "Export Quake Map (.map)",
-    "author": "chedap",
-    "version": (2019, 11, 26),
-    "blender": (2, 81, 0),
-    "location": "File > Import-Export",
-    "description": "Export geometry as brushes",
-    "category": "Import-Export",
-}
-
 import bpy, bmesh, math
 from mathutils import Vector, Matrix
 from numpy.linalg import solve
 from bpy_extras.io_utils import ExportHelper
-from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty, PointerProperty
-from bpy.types import PropertyGroup
+from bpy.props import StringProperty, BoolProperty, FloatProperty, EnumProperty
+
 
 class ExportQuakeMap(bpy.types.Operator, ExportHelper):
     bl_idname = 'export.map'
-    bl_label = bl_info['name']
-    bl_description = bl_info['description']
+    bl_label = "(Gtk/Net)Radiant Quake .map"
+    bl_description = "Export scene as (Gtk/NetRadiant) Quake map"
     bl_options = {'UNDO'}
     filename_ext = ".map"
     filter_glob: StringProperty(default="*.map", options={'HIDDEN'})
@@ -44,7 +34,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
     option_tm: BoolProperty(name="Apply transform", default=True)
     option_grid: FloatProperty(name="Grid", default=4.0,
         description="Snap to grid (0 for off-grid)", min=0.0, max=256.0)
-    option_format: EnumProperty(name="Format", default='Standard',
+    option_format: EnumProperty(name="Format", default='Quake',
         items=( ('Quake', "Standard", "Axis-aligned texture projection"),
                 ('Valve', "Valve220", "Face-bound texture projection") ) )
     option_dest: EnumProperty(name="Save to", default='File',
@@ -338,167 +328,5 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 
-class MakeRoomOperator(bpy.types.Operator):
-    '''(Gtk/Net)Radiant-like "Make Room"'''
-    bl_idname = "mesh.make_room"
-    bl_label = "Make Room"
-    bl_options = {"REGISTER", "UNDO"}
-
-    thickness: bpy.props.FloatProperty(name="Wall Thickness", default=0.2)
-
-    @classmethod
-    def poll(cls, context):
-        return context.active_object is not None \
-        and context.active_object.type == "MESH" \
-        and bpy.context.mode == "OBJECT"
-
-    def execute(self, context):
-        if bpy.ops.object.mode_set.poll():
-            bpy.ops.object.mode_set(mode='EDIT')
-        bpy.ops.mesh.edge_split(type="EDGE")
-        bpy.ops.mesh.separate(type="LOOSE")
-        bpy.ops.object.mode_set(mode='OBJECT')
-        for obj in context.selected_objects:
-            bpy.context.view_layer.objects.active = obj
-            solidify_mod = context.active_object.modifiers.new(name="BlendRadiantSolidify", type="SOLIDIFY")
-            solidify_mod.thickness = self.thickness
-            solidify_mod.offset = 1.0
-            bpy.ops.object.modifier_apply(modifier="BlendRadiantSolidify")
-        return {'FINISHED'}
-
-
-# XXX I guess these could be staticmethods in the property class above, if
-# Blender doesn't go nuts over this
-
-def on_update_mesh_as(self, context):
-    obj = context.object
-    if self.mesh_as == "ROOM_BRUSHES":
-        if "BlendRadiantSolidifyPreview" not in obj.modifiers.keys():
-            preview_mod = obj.modifiers.new(name="BlendRadiantSolidifyPreview",
-                type="SOLIDIFY")
-            preview_mod.offset = 1.0
-        preview_mod.thickness = self.room_brush_thickness
-    else:
-        if "BlendRadiantSolidifyPreview" in obj.modifiers:
-            preview_mod = obj.modifiers["BlendRadiantSolidifyPreview"]
-            obj.modifiers.remove(preview_mod)
-
-def on_update_room_brush_thickness(self, context):
-    obj = context.object
-    preview_mod = obj.modifiers["BlendRadiantSolidifyPreview"]
-    preview_mod.thickness = self.room_brush_thickness
-
-
-class BlendRadiantObjectProperties(PropertyGroup):
-    mesh_as: EnumProperty(
-        name="Mesh as",
-        description="What to represent this mesh as in .map output",
-        items=[
-                ('NONE', "Nothing", ""),
-                ('CONVEX_BRUSH', "Convex Brush", ""),
-                ('ROOM_BRUSHES', "Room Brush(es)", ""),
-                ('MODEL', "Model", ""),
-            ],
-        update=on_update_mesh_as
-        )
-    light_as: EnumProperty(
-        name="Light as",
-        description="What to represent this light as in .map output",
-        items=[
-                ('NONE', "Nothing", ""),
-                ('LIGHT', "Light", ""),
-            ]
-        )
-    room_brush_thickness: FloatProperty(
-        name="Thickness",
-        description="Thickness of Room Brush walls",
-        default=0.1,
-        update=on_update_room_brush_thickness,
-    )
-    entity_classname: StringProperty(
-        name="Entity Classname",
-    )
-
-
-# this is JUST to have a text field (= StringProperty prop) that can
-# be filled in using a long searchable list! ridiculous, blender
-
-entity_classnames = [] # ensure Python keeps refs, cf warning in EnumProperty docs
-def get_entity_classnames(self, context):
-    global entity_classnames
-    entity_classnames = [
-        ("worldspawn", "worldspawn", ""),
-        ("info_player_deathmatch", "info_player_deathmatch", ""),
-    ]
-    return entity_classnames
-
-class SearchEntityClassnamesOperator(bpy.types.Operator):
-    bl_idname = "object.search_entity_classnames"
-    bl_label = "Search Entity Classnames"
-    bl_property = "entity_classname"
-    
-    entity_classname: EnumProperty(
-        name="Entity Classname",
-        items=get_entity_classnames,
-    )
-
-    def execute(self, context):
-        bpy.context.active_object.blendradiant.entity_classname = self.entity_classname
-        return {'FINISHED'}
-
-    def invoke(self, context, event):
-        context.window_manager.invoke_search_popup(self)
-        return {'RUNNING_MODAL'}
-
-
-class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
-    bl_idname = "OBJECT_PT_blendradiant"
-    bl_label = "BlendRadiant"
-    bl_space_type = 'PROPERTIES'
-    bl_region_type = 'WINDOW'
-    bl_context = "object"
-    bl_options = {'DEFAULT_CLOSED'}
-
-    @classmethod
-    def poll(cls, context):
-        return (context.object is not None)
-
-    def draw(self, context):
-        layout = self.layout
-        obj = context.active_object
-
-        if obj.type == "MESH":
-            layout.prop(obj.blendradiant, "mesh_as")
-            if obj.blendradiant.mesh_as == "ROOM_BRUSHES":
-                layout.prop(obj.blendradiant, "room_brush_thickness")
-        elif obj.type == "LIGHT":
-            layout.prop(obj.blendradiant, "light_as")
-
-        row = layout.row()
-        row.prop(obj.blendradiant, "entity_classname")
-        row.operator("object.search_entity_classnames", text="", icon="VIEWZOOM")
-
-
 def menu_func_export(self, context):
-    self.layout.operator(ExportQuakeMap.bl_idname, text="Quake Map (.map)")
-
-def register():
-    bpy.utils.register_class(ExportQuakeMap)
-    bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
-    bpy.utils.register_class(BlendRadiantObjectProperties)
-    bpy.types.Object.blendradiant = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
-    bpy.utils.register_class(SearchEntityClassnamesOperator)
-    bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
-    bpy.utils.register_class(MakeRoomOperator)
-
-def unregister():
-    bpy.utils.unregister_class(ExportQuakeMap)
-    bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
-    bpy.utils.unregister_class(BlendRadiantObjectProperties)
-    del bpy.types.Object.blendradiant
-    bpy.utils.unregister_class(SearchEntityClassnamesOperator)
-    bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
-    bpy.utils.unregister_class(MakeRoomOperator)
-
-if __name__ == "__main__":
-    register()
+    self.layout.operator(ExportQuakeMap.bl_idname, text="(Gtk/NetRadiant) Quake Map (.map)")
