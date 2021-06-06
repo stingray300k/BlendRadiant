@@ -15,8 +15,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from bpy.props import StringProperty, FloatProperty, EnumProperty
+from bpy.props import StringProperty, FloatProperty, EnumProperty, \
+    CollectionProperty, IntProperty
 from bpy.types import PropertyGroup
+
+
+class KeyValuePair(PropertyGroup):
+    key: StringProperty(name="Key")
+    value: StringProperty(name="Value")
 
 
 # XXX I guess these could be staticmethods in the property class below, if
@@ -71,4 +77,13 @@ class BlendRadiantObjectProperties(PropertyGroup):
     entity_classname: StringProperty(
         name="Entity Classname",
     )
+    entity_key_value_pairs: CollectionProperty(
+        name="Entity Key-Value Pairs",
+        type=KeyValuePair
+    )
 
+    # UI internals, not "actual" properties
+    entity_key_value_pairs_active_index: IntProperty(
+        name="Entity Key-Value Pairs Active Index",
+        default=0,
+    )

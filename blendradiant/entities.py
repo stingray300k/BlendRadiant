@@ -18,13 +18,11 @@
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-
-entity_classnames = [] # ensure Python keeps refs, cf warning in EnumProperty docs
-def get_entity_classnames(self, context):
-    global entity_classnames
+# internal use only
+def _get_entity_classes_etree(context):
     prefs = context.preferences.addons[__package__].preferences
-    entity_classnames = []
     # parse gamepack's entities.ent XML file
+    # TODO cache this somehow to avoid re-reading file on each redraw
     if not prefs.radiant_path and not prefs.default_game:
         return []
     entities_path = Path(prefs.radiant_path, "gamepacks",
@@ -34,9 +32,36 @@ def get_entity_classnames(self, context):
         print(f"entities definition file {entities_path} not found")
     tree = ET.parse(entities_path)
     classes = tree.getroot()
+    return classes
+
+
+entity_classnames = [] # ensure Python keeps refs, cf warning in EnumProperty docs
+def get_entity_classnames(self, context):
+    global entity_classnames
+    entity_classnames[:] = []
+    classes = _get_entity_classes_etree(context=context)
     for entity_class in classes:
         name = entity_class.get("name")
         if not name:
             continue
         entity_classnames.append((name, name, ""))
     return entity_classnames
+
+
+entity_keys = []
+def get_entity_keys_for_current(self, context):
+    global entity_keys
+    entity_keys[:] = []
+    classname = context.active_object.blendradiant.entity_classname
+    if not classname:
+        return []
+    classes = _get_entity_classes_etree(context=context)
+    active_class = classes.find(f"./*[@name='{classname}']") # TODO quote?
+    if not active_class:
+        return []
+    for key in active_class:
+        keyname = key.get("key")
+        if not keyname:
+            continue
+        entity_keys.append((keyname, keyname, ""))
+    return entity_keys
