@@ -1,9 +1,43 @@
-This is a fork of io_export_qmap with the aim of modifying it until it can
-export maps that are directly readable by (Gtk/Net)Radiant. Another aim is to
-add tools that facilitate the creation of entire maps (including lights,
-models, entities, ... and not just brushes) in Blender, basically allowing
-users to do everything they could otherwise do in (Gtk/Net)Radiant - hence the
-name *BlendRadiant*.
+# BlendRadiant
+
+This is a fork of [c-d-a](https://github.com/c-d-a)'s `io_export_qmap` Blender
+Addon, with the aim of modifying it until it can export maps that are directly
+readable by (Gtk/Net)Radiant. Another aim is to add tools that facilitate the
+creation of entire maps (including lights, models, entities, ... and not just
+brushes) in Blender, basically allowing users to do everything they could
+otherwise do in (Gtk/Net)Radiant - hence the name *BlendRadiant*.
+
+## Status
+
+Right now, only the UI has been worked on, while the actual export
+functionality has only had features *removed* compared to `io_export_qmap`. I
+only put this on GitHub to have an issue tracker.
+
+### Required features until "minimal viability"
+
+- [x] Export meshes as "rooms" ("Make Room" in (Gtk/Net)Radiant)
+- [ ] Export entity key-value pairs
+  - [x] Read entity definitions from Radiant gamepack files
+  - [x] UI for setting entity classname and attributes
+  - [ ] Actual export
+- [ ] Export lights
+  - [ ] Special UI that is more limited version of entity UI
+- [ ] Either output directly as Brush Primitive map (Radiant format) or use
+      `q3map2` to convert after export
+- [ ] Fix texture issues
+- [ ] Massive cleanup
+
+### Features that would be nice to have
+
+- [ ] Global scale factor
+- [ ] Export as models
+- [ ] Read shader definitions (existing addons?)
+  - [ ] Alternatively: export rudimentary shader based on Blender material as
+        placeholder
+- [ ] Scale mesh with point entity class so bounding box matches spec
+
+
+Below is `io_export_qmap`'s original README:
 
 -----
 
