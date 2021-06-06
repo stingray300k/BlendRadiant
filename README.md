@@ -13,6 +13,8 @@ Right now, only the UI has been worked on, while the actual export
 functionality has only had features *removed* compared to `io_export_qmap`. I
 only put this on GitHub to have an issue tracker.
 
+![BlendRadiant object properties in Blender UI](https://user-images.githubusercontent.com/85426069/120913605-7b3f3280-c698-11eb-9687-7a34494cd6aa.png)
+
 ### Required features until "minimal viability"
 
 - [x] Export meshes as "rooms" ("Make Room" in (Gtk/Net)Radiant)
