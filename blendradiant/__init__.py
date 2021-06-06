@@ -21,6 +21,7 @@ from .ui import BlendRadiantObjectPropertiesPanel, \
   SearchEntityClassnamesOperator
 from .mesh import MakeRoomOperator
 from .props import BlendRadiantObjectProperties
+from .prefs import BlendRadiantAddonPreferences
 
 bl_info = {
     "name": "BlendRadiant",
@@ -40,6 +41,7 @@ def register():
     bpy.utils.register_class(SearchEntityClassnamesOperator)
     bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.register_class(MakeRoomOperator)
+    bpy.utils.register_class(BlendRadiantAddonPreferences)
 
 def unregister():
     bpy.utils.unregister_class(ExportQuakeMap)
@@ -49,6 +51,7 @@ def unregister():
     bpy.utils.unregister_class(SearchEntityClassnamesOperator)
     bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.unregister_class(MakeRoomOperator)
+    bpy.utils.unregister_class(BlendRadiantAddonPreferences)
 
 if __name__ == "__main__":
     register()
