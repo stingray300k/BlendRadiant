@@ -17,10 +17,11 @@
 
 import bpy
 from .export import ExportQuakeMap, menu_func_export
-from .ui import BlendRadiantObjectPropertiesPanel, \
-  SearchEntityClassnamesOperator
+from .ui import UI_UL_Entity_Key_Value, NewEntityKeyValuePairOperator, \
+  BlendRadiantObjectPropertiesPanel, SearchEntityClassnamesOperator, \
+  SearchEntityKeyOperator, DeleteEntityKeyValuePairOperator
 from .mesh import MakeRoomOperator
-from .props import BlendRadiantObjectProperties
+from .props import BlendRadiantObjectProperties, KeyValuePair
 from .prefs import BlendRadiantAddonPreferences
 
 bl_info = {
@@ -36,9 +37,14 @@ bl_info = {
 def register():
     bpy.utils.register_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.append(menu_func_export)
+    bpy.utils.register_class(KeyValuePair)
     bpy.utils.register_class(BlendRadiantObjectProperties)
     bpy.types.Object.blendradiant = bpy.props.PointerProperty(type=BlendRadiantObjectProperties)
     bpy.utils.register_class(SearchEntityClassnamesOperator)
+    bpy.utils.register_class(SearchEntityKeyOperator)
+    bpy.utils.register_class(UI_UL_Entity_Key_Value)
+    bpy.utils.register_class(NewEntityKeyValuePairOperator)
+    bpy.utils.register_class(DeleteEntityKeyValuePairOperator)
     bpy.utils.register_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.register_class(MakeRoomOperator)
     bpy.utils.register_class(BlendRadiantAddonPreferences)
@@ -46,9 +52,14 @@ def register():
 def unregister():
     bpy.utils.unregister_class(ExportQuakeMap)
     bpy.types.TOPBAR_MT_file_export.remove(menu_func_export)
+    bpy.utils.register_class(KeyValuePair)
     bpy.utils.unregister_class(BlendRadiantObjectProperties)
     del bpy.types.Object.blendradiant
     bpy.utils.unregister_class(SearchEntityClassnamesOperator)
+    bpy.utils.unregister_class(SearchEntityKeyOperator)
+    bpy.utils.unregister_class(UI_UL_Entity_Key_Value)
+    bpy.utils.unregister_class(NewEntityKeyValuePairOperator)
+    bpy.utils.unregister_class(DeleteEntityKeyValuePairOperator)
     bpy.utils.unregister_class(BlendRadiantObjectPropertiesPanel)
     bpy.utils.unregister_class(MakeRoomOperator)
     bpy.utils.unregister_class(BlendRadiantAddonPreferences)

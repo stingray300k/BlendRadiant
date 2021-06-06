@@ -17,7 +17,7 @@
 
 import bpy
 from bpy.props import EnumProperty
-from .entities import get_entity_classnames
+from .entities import get_entity_classnames, get_entity_keys_for_current
 
 
 # this is JUST to have a text field (= StringProperty prop) that can
@@ -41,6 +41,60 @@ class SearchEntityClassnamesOperator(bpy.types.Operator):
         context.window_manager.invoke_search_popup(self)
         return {'RUNNING_MODAL'}
 
+# key-value list for entities
+class UI_UL_Entity_Key_Value(bpy.types.UIList):
+    def draw_item(self, context, layout, data, item, icon, active_data, active_propname):
+        slot = item
+        if self.layout_type in {'DEFAULT', 'COMPACT'}:
+            layout.prop(slot, "key", text="", emboss=False)
+            layout.prop(slot, "value", text="", emboss=False)
+        elif self.layout_type in {'GRID'}:
+            layout.alignment = 'CENTER'
+            layout.label(text="", icon_value=icon)
+
+class NewEntityKeyValuePairOperator(bpy.types.Operator):
+    bl_idname = "object.new_entity_key_value_pair"
+    bl_label = "Add New Entity Key-Value Pair"
+
+    def execute(self, context):
+        pair = context.active_object.blendradiant.entity_key_value_pairs.add()
+        i = len(context.active_object.blendradiant.entity_key_value_pairs)-1
+        context.active_object.blendradiant.entity_key_value_pairs_active_index = i
+        pair.key = "KEY"
+        pair.value = "VALUE"
+        bpy.ops.object.search_entity_key("INVOKE_DEFAULT")
+        return {'FINISHED'}
+
+class SearchEntityKeyOperator(bpy.types.Operator):
+    bl_idname = "object.search_entity_key"
+    bl_label = "Search Entity Key"
+    bl_property = "entity_key"
+
+    entity_key: EnumProperty(
+        name="Entity Key",
+        items=get_entity_keys_for_current,
+    )
+
+    def execute(self, context):
+        i = bpy.context.active_object.blendradiant.entity_key_value_pairs_active_index
+        bpy.context.active_object.blendradiant.entity_key_value_pairs[i].key = self.entity_key
+        return {'FINISHED'}
+
+    def invoke(self, context, event):
+        context.window_manager.invoke_search_popup(self)
+        return {'RUNNING_MODAL'}
+
+
+class DeleteEntityKeyValuePairOperator(bpy.types.Operator):
+    bl_idname = "object.delete_entity_key_value_pair"
+    bl_label = "Delete Active Entity Key-Value Pair"
+
+    def execute(self, context):
+        i = context.active_object.blendradiant.entity_key_value_pairs_active_index
+        context.active_object.blendradiant.entity_key_value_pairs.remove(i)
+        if i > 0:
+            context.active_object.blendradiant.entity_key_value_pairs_active_index -= 1
+        return {'FINISHED'}
 
 # actual main properties panel
 
@@ -70,3 +124,14 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(obj.blendradiant, "entity_classname")
         row.operator("object.search_entity_classnames", text="", icon="VIEWZOOM")
+
+        if obj.blendradiant.entity_classname:
+            row = layout.row()
+            row.template_list("UI_UL_Entity_Key_Value", "",
+                obj.blendradiant, "entity_key_value_pairs", obj.blendradiant,
+                "entity_key_value_pairs_active_index")
+            column = row.column()
+            column.operator("object.new_entity_key_value_pair", text="",
+                icon="ADD")
+            column.operator("object.delete_entity_key_value_pair", text="",
+                icon="REMOVE")
