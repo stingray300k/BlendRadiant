@@ -17,19 +17,11 @@
 
 import bpy
 from bpy.props import EnumProperty
+from .entities import get_entity_classnames
 
 
 # this is JUST to have a text field (= StringProperty prop) that can
 # be filled in using a long searchable list! ridiculous, blender
-
-entity_classnames = [] # ensure Python keeps refs, cf warning in EnumProperty docs
-def get_entity_classnames(self, context):
-    global entity_classnames
-    entity_classnames = [
-        ("worldspawn", "worldspawn", ""),
-        ("info_player_deathmatch", "info_player_deathmatch", ""),
-    ]
-    return entity_classnames
 
 class SearchEntityClassnamesOperator(bpy.types.Operator):
     bl_idname = "object.search_entity_classnames"
@@ -78,4 +70,3 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
         row = layout.row()
         row.prop(obj.blendradiant, "entity_classname")
         row.operator("object.search_entity_classnames", text="", icon="VIEWZOOM")
-
