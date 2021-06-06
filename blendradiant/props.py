@@ -18,6 +18,7 @@
 from bpy.props import StringProperty, FloatProperty, EnumProperty
 from bpy.types import PropertyGroup
 
+
 # XXX I guess these could be staticmethods in the property class below, if
 # Blender doesn't go nuts over this
 
