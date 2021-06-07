@@ -18,12 +18,13 @@ only put this on GitHub to have an issue tracker.
 ### Required features until "minimal viability"
 
 - [x] Export meshes as "rooms" ("Make Room" in (Gtk/Net)Radiant)
-- [ ] Export entity key-value pairs
+- [x] Export entity key-value pairs
   - [x] Read entity definitions from Radiant gamepack files
   - [x] UI for setting entity classname and attributes
-  - [ ] Actual export
+  - [x] Actual export
 - [ ] Export lights
-  - [ ] Special UI that is more limited version of entity UI
+  - [x] Export as ordinary entities (no special case for lights)
+  - [ ] Special UI that is more limited version of entity UI (?)
 - [ ] Either output directly as Brush Primitive map (Radiant format) or use
       `q3map2` to convert after export
 - [ ] Fix texture issues
@@ -36,6 +37,7 @@ only put this on GitHub to have an issue tracker.
 - [ ] Read shader definitions (existing addons?)
   - [ ] Alternatively: export rudimentary shader based on Blender material as
         placeholder
+- [ ] Approximate lights from Blender's native light properties
 - [ ] Scale mesh with point entity class so bounding box matches spec
 
 
