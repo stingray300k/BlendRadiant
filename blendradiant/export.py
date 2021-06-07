@@ -239,13 +239,51 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             objects = context.selected_objects
         else:
             objects = context.scene.objects
-        objects = [obj for obj in objects if obj.type == 'MESH']
+        non_entity_meshes = [obj for obj in objects if obj.type == 'MESH'
+            and len(obj.blendradiant.entity_key_value_pairs) == 0]
+        entity_meshes = [obj for obj in objects if obj.type == 'MESH'
+            and len(obj.blendradiant.entity_key_value_pairs) > 0]
 
+        geos = []
+
+        # "non-entity" (= worldspawn entity, actually) brushes
+        non_entity_key_value_pairs = { "classname": "worldspawn" }
+        if self.option_format == 'Valve':
+            non_entity_key_value_pairs["mapversion"] = "220"
+        geo = self._write_entity(non_entity_meshes, non_entity_key_value_pairs)
+        geos.append(geo)
+
+        # entity brushes
+        for obj in entity_meshes:
+            entity_key_value_pairs = {
+                "classname": obj.blendradiant.entity_classname
+            }
+            entity_key_value_pairs.update({
+                pair.key: pair.value for pair
+                in obj.blendradiant.entity_key_value_pairs
+            })
+            geo = self._write_entity([obj], entity_key_value_pairs)
+            geos.append(geo)
+
+        # put everything together and write out or store in clipboard
+        map_file_contents = "\n".join(''.join(geo) for geo in geos if geo)
+        if self.option_dest == 'File':
+            with open(self.filepath, 'w') as file:
+                file.write(map_file_contents)
+        else:
+            bpy.context.window_manager.clipboard = map_file_contents
+
+        return {'FINISHED'}
+
+    # TODO it's bad style to have fw as an argument here; better to use
+    # separate lists
+    def _write_entity(self, objects, key_value_pairs):
         geo = []
         fw = geo.append
-        fw('{\n"classname" "worldspawn"\n')
-        if self.option_format == 'Valve':
-            fw('"mapversion" "220"\n')
+
+        fw('{\n')
+        fw("\n".join([f'"{k}" "{v}"' for k, v in key_value_pairs.items()]))
+        fw('\n')
 
         # store active + selected objects in editor because
         # we will have to change them to apply high-level op
@@ -319,13 +357,7 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
 
         fw('}')
 
-        if self.option_dest == 'File':
-            with open(self.filepath, 'w') as file:
-                file.write(''.join(geo))
-        else:
-            bpy.context.window_manager.clipboard = ''.join(geo)
-
-        return {'FINISHED'}
+        return geo
 
 
 def menu_func_export(self, context):
