@@ -118,8 +118,6 @@ class BlendRadiantObjectPropertiesPanel(bpy.types.Panel):
             layout.prop(obj.blendradiant, "mesh_as")
             if obj.blendradiant.mesh_as == "ROOM_BRUSHES":
                 layout.prop(obj.blendradiant, "room_brush_thickness")
-        elif obj.type == "LIGHT":
-            layout.prop(obj.blendradiant, "light_as")
 
         row = layout.row()
         row.prop(obj.blendradiant, "entity_classname")

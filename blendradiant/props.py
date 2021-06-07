@@ -60,14 +60,6 @@ class BlendRadiantObjectProperties(PropertyGroup):
             ],
         update=on_update_mesh_as
         )
-    light_as: EnumProperty(
-        name="Light as",
-        description="What to represent this light as in .map output",
-        items=[
-                ('NONE', "Nothing", ""),
-                ('LIGHT', "Light", ""),
-            ]
-        )
     room_brush_thickness: FloatProperty(
         name="Thickness",
         description="Thickness of Room Brush walls",
