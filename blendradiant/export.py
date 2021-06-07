@@ -239,10 +239,30 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             objects = context.selected_objects
         else:
             objects = context.scene.objects
-        non_entity_meshes = [obj for obj in objects if obj.type == 'MESH'
-            and len(obj.blendradiant.entity_key_value_pairs) == 0]
-        entity_meshes = [obj for obj in objects if obj.type == 'MESH'
-            and len(obj.blendradiant.entity_key_value_pairs) > 0]
+
+        non_entity_meshes = [obj for obj in objects if (
+            obj.type == 'MESH' and obj.blendradiant.mesh_as != "NONE" and
+            (
+                not obj.blendradiant.entity_classname
+                and len(obj.blendradiant.entity_key_value_pairs) == 0
+            )
+        )]
+
+        entity_meshes = [obj for obj in objects if (
+            obj.type == 'MESH' and obj.blendradiant.mesh_as != "NONE" and
+            (
+                obj.blendradiant.entity_classname
+                or len(obj.blendradiant.entity_key_value_pairs) > 0
+            )
+        )]
+
+        brushless_entities = [obj for obj in objects if (
+            (obj.type != 'MESH' or obj.blendradiant.mesh_as == "NONE") and
+            (
+                obj.blendradiant.entity_classname
+                or len(obj.blendradiant.entity_key_value_pairs) > 0
+            )
+        )]
 
         geos = []
 
@@ -265,6 +285,22 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
             geo = self._write_entity([obj], entity_key_value_pairs)
             geos.append(geo)
 
+        # non-brush entities
+        for obj in brushless_entities:
+            entity_key_value_pairs = {
+                "classname": obj.blendradiant.entity_classname,
+                # TODO is it OK to take the object location or should I compute
+                # the geometric mean or sth. like that? makes no difference for
+                # lamps etc. but does for meshes (with mesh_as = NONE)
+                "origin": " ".join(str(x) for x in obj.location)
+            }
+            entity_key_value_pairs.update({
+                pair.key: pair.value for pair
+                in obj.blendradiant.entity_key_value_pairs
+            })
+            geo = self._write_entity([], entity_key_value_pairs)
+            geos.append(geo)
+
         # put everything together and write out or store in clipboard
         map_file_contents = "\n".join(''.join(geo) for geo in geos if geo)
         if self.option_dest == 'File':
@@ -275,9 +311,18 @@ class ExportQuakeMap(bpy.types.Operator, ExportHelper):
 
         return {'FINISHED'}
 
-    # TODO it's bad style to have fw as an argument here; better to use
-    # separate lists
     def _write_entity(self, objects, key_value_pairs):
+        """
+        Prepares a list of strings that make up an entity in the map file
+
+        `objects` are the individual Blender objects (type: MESH) that will be
+        turned into a or multiple brushes. Can be an empty list to write out a
+        non-brush entity.
+        `key_value_pairs` are the entity key-value pairs (including
+        "classname") as an ordinary Python dictionary.
+
+        Returns the aforementioned list of strings constituting the entity.
+        """
         geo = []
         fw = geo.append
 
