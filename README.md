@@ -15,6 +15,9 @@ only put this on GitHub to have an issue tracker.
 
 ![BlendRadiant object properties in Blender UI](https://user-images.githubusercontent.com/85426069/120913605-7b3f3280-c698-11eb-9687-7a34494cd6aa.png)
 
+![BlendRadiant Add-on preferences in Blender UI](https://user-images.githubusercontent.com/85426069/127597333-4c88017c-ca8d-454f-a05f-a2bbb06b6e8d.png)
+
+
 ### Required features until "minimal viability"
 
 - [x] Export meshes as "rooms" ("Make Room" in (Gtk/Net)Radiant)
